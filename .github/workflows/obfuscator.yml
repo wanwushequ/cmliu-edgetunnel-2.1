@@ -1,0 +1,51 @@
+name: 混淆
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 北京时间 03:00 -> UTC 19:00 (前一天)
+    # 北京时间 15:00 -> UTC 07:00
+    - cron: '0 7,19 * * *'
+
+jobs:
+  obfuscate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+
+      - name: 安装混淆工具
+        run: npm install -g javascript-obfuscator
+
+      - name: 执行混淆
+        run: |
+          javascript-obfuscator 明文源码.js --output _worker.js \
+          --compact true \
+          --control-flow-flattening true \
+          --control-flow-flattening-threshold 1 \
+          --dead-code-injection true \
+          --dead-code-injection-threshold 1 \
+          --identifier-names-generator hexadecimal \
+          --rename-globals true \
+          --string-array true \
+          --string-array-encoding 'rc4' \
+          --string-array-threshold 1 \
+          --transform-object-keys true \
+          --unicode-escape-sequence true
+
+      - name: 提交并推送
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add _worker.js
+          
+          if git diff --cached --quiet; then
+            echo "代码无变化，跳过提交"
+          else
+            git commit -m "Automated obfuscation: 更新 _worker.js"
+            git push
+          fi
