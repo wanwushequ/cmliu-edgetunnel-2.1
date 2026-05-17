@@ -32,7 +32,7 @@ jobs:
           --rename-globals true \
           --string-array true \
           --string-array-encoding 'rc4' \
-          --string-array-threshold 0.3 \
+          --string-array-threshold 0.1 \
           --transform-object-keys true \
           --unicode-escape-sequence true
 
