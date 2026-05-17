@@ -25,9 +25,9 @@ jobs:
           javascript-obfuscator 明文源码.js --output _worker.js \
           --compact true \
           --control-flow-flattening true \
-          --control-flow-flattening-threshold 1 \
+          --control-flow-flattening-threshold 0.3 \
           --dead-code-injection true \
-          --dead-code-injection-threshold 1 \
+          --dead-code-injection-threshold 0.3 \
           --identifier-names-generator hexadecimal \
           --rename-globals true \
           --string-array true \
