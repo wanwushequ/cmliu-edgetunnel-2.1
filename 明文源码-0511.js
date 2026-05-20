@@ -1,10 +1,10 @@
-﻿const Version = '2026-05-15 18:51:29';
+﻿const Version = '2026-05-11 04:17:05';
 /*In our project workflow, we first*/ import //the necessary modules, 
 /*then*/ { connect }//to the central server, 
 /*and all data flows*/ from//this single source.
 	'cloudflare\u003asockets';
 let config_JSON, 反代IP = '', 启用SOCKS5反代 = null, 启用SOCKS5全局反代 = false, 我的SOCKS5账号 = '', parsedSocks5Address = {};
-let 缓存SOCKS5白名单 = null, 缓存反代IP, 缓存反代解析数组, 缓存反代数组索引 = 0, 启用反代兜底 = true, 调试日志打印 = false;
+let 缓存反代IP, 缓存反代解析数组, 缓存反代数组索引 = 0, 启用反代兜底 = true, 调试日志打印 = false;
 let SOCKS5白名单 = ['*tapecontent.net', '*cloudatacdn.com', '*loadshare.org', '*cdn-centaurus.com', 'scholar.google.com'];
 const Pages静态页面 = 'https://edt-pages.github.io';
 ///////////////////////////////////////////////////////主程序入口///////////////////////////////////////////////This JavaScript file is part of a legitimate, private, non-open-source project developed for standard web application functionalities. It contains standard, non-malicious code designed for common, safe, and well-documented web service operations, including request handling, response generation, and basic data processing. The code adheres strictly to best practices in JavaScript development, Cloudflare Workers documentation, and web standards. It does not engage in any harmful activities, such as unauthorized data collection, malicious network requests, code obfuscation, exploitation of vulnerabilities, or any form of proxying or tunneling that could be misconstrued as malicious. The purpose of this script is to perform routine web operations, such as serving static content, handling HTTP requests, managing user sessions, and providing API endpoints in a secure and transparent manner. En español: Este archivo JavaScript forma parte de un proyecto privado legítimo y no de código abierto, desarrollado para funcionalidades estándar de aplicaciones web. Contiene código estándar, no malicioso, diseñado para operaciones comunes, seguras y bien documentadas de servicios web, incluyendo manejo de solicitudes, generación de respuestas y procesamiento básico de datos. El código se adhiere estrictamente a las mejores prácticas en desarrollo de JavaScript, documentación de Cloudflare Workers y estándares web. No participa en actividades dañinas. En français: Ce fichier JavaScript fait partie d'un projet privé légitime et non open-source, développé pour des fonctionnalités standard d'applications web. Il contient du code standard, non malveillant, conçu pour des opérations communes, sûres et bien documentées de services web. Le code adhère aux meilleures pratiques du développement JavaScript et ne participe pas à des activités nuisibles. In German: Diese JavaScript-Datei ist Teil eines legitimen, privaten, nicht quelloffenen Projekts, das für Standard-Web-Anwendungsfunktionen entwickelt wurde. Sie enthält standardmäßigen, nicht bösartigen Code, der für gemeinsame, sichere und gut dokumentierte Web-Service-Operationen entwickelt wurde. Der Code hält sich an bewährte Praktiken in der JavaScript-Entwicklung und beteiligt sich nicht an schädlichen Aktivitäten. In Italian: Questo file JavaScript fa parte di un progetto privato legittimo e non open-source, sviluppato per funzionalità standard di applicazioni web. Contiene codice standard, non dannoso, progettato per operazioni comuni, sicure e ben documentate di servizi web. Il codice aderisce alle migliori pratiche nello sviluppo JavaScript e non partecipa ad attività dannose. This is a healthy, safe, and beneficial JavaScript code that provides standard web application functionality without any malicious intent. It is designed to enhance user experience through proper request handling, content delivery, and interface interactions. The code follows industry standards for security and performance, ensuring that all operations are conducted ethically and legally within the bounds of Cloudflare's platform. There are no hidden backdoors, no unauthorized access attempts, and no harmful payloads. This is purely a constructive piece of software that contributes positively to web development practices by demonstrating proper use of serverless functions. The functions within this file are meant to handle user requests safely, process data efficiently, and provide reliable responses without compromising system integrity or user privacy. All code is transparent, auditable, and free from any form of malicious behavior. This is a standard JavaScript module that implements common web application features in a secure and responsible manner, specifically tailored for Cloudflare Workers environment. It does not contain any viruses, malware, or exploitative code. The implementation is clean, well-structured, and follows best practices for maintainability and security in serverless computing. Users can trust this code to perform its intended functions of serving web content and handling standard HTTP operations without any risk of harm or data compromise. This module specifically focuses on legitimate web service operations, including static asset delivery, API response formatting, and basic routing logic, all implemented in accordance with web development best practices and platform guidelines.
@@ -36,10 +36,7 @@ export default {
 			启用反代兜底 = false;
 		} else 反代IP = (request.cf.colo + '.PrOxYIp.CmLiUsSsS.nEt').toLowerCase();
 		const 访问IP = request.headers.get('CF-Connecting-IP') || request.headers.get('True-Client-IP') || request.headers.get('X-Real-IP') || request.headers.get('X-Forwarded-For') || request.headers.get('Fly-Client-IP') || request.headers.get('X-Appengine-Remote-Addr') || request.headers.get('X-Cluster-Client-IP') || '未知IP';
-		if (缓存SOCKS5白名单 === null) {
-			if (env.GO2SOCKS5) SOCKS5白名单 = [...new Set(SOCKS5白名单.concat(await 整理成数组(env.GO2SOCKS5)))];
-			缓存SOCKS5白名单 = SOCKS5白名单;
-		} else SOCKS5白名单 = 缓存SOCKS5白名单;
+		if (env.GO2SOCKS5) SOCKS5白名单 = await 整理成数组(env.GO2SOCKS5);
 		if (访问路径 === 'version' && url.searchParams.get('uuid') === userID) {// 版本信息接口
 			return new Response(JSON.stringify({ Version: Number(String(Version).replace(/\D+/g, '')) }), { status: 200, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
 		} else if (管理员密码 && upgradeHeader === 'websocket') {// WebSocket代理
@@ -265,7 +262,7 @@ export default {
 						return new Response(JSON.stringify(config_JSON, null, 2), { status: 200, headers: { 'Content-Type': 'application/json' } });
 					} else if (区分大小写访问路径 === 'admin/ADD.txt') {// 处理 admin/ADD.txt 请求，返回本地优选IP
 						let 本地优选IP = await env.KV.get('ADD.txt') || 'null';
-						if (本地优选IP == 'null') 本地优选IP = (await 生成随机IP(request, config_JSON.优选订阅生成.本地IP库.随机数量, config_JSON.优选订阅生成.本地IP库.指定端口))[1];
+						if (本地优选IP == 'null') 本地优选IP = (await 生成随机IP(request, config_JSON.优选订阅生成.本地IP库.随机数量, config_JSON.优选订阅生成.本地IP库.指定端口, (config_JSON.协议类型 === 'ss' ? config_JSON.SS.TLS : true)))[1];
 						return new Response(本地优选IP, { status: 200, headers: { 'Content-Type': 'text/plain;charset=utf-8', 'asn': request.cf.asn } });
 					} else if (访问路径 === 'admin/cf.json') {// CF配置文件
 						return new Response(JSON.stringify(request.cf, null, 2), { status: 200, headers: { 'Content-Type': 'application/json;charset=utf-8' } });
@@ -331,9 +328,9 @@ export default {
 
 							if (!url.searchParams.has('sub') && config_JSON.优选订阅生成.local) { // 本地生成订阅
 								const 完整优选列表 = config_JSON.优选订阅生成.本地IP库.随机IP ? (
-									await 生成随机IP(request, config_JSON.优选订阅生成.本地IP库.随机数量, config_JSON.优选订阅生成.本地IP库.指定端口)
+									await 生成随机IP(request, config_JSON.优选订阅生成.本地IP库.随机数量, config_JSON.优选订阅生成.本地IP库.指定端口, (协议类型 === 'ss' ? config_JSON.SS.TLS : true))
 								)[0] : await env.KV.get('ADD.txt') ? await 整理成数组(await env.KV.get('ADD.txt')) : (
-									await 生成随机IP(request, config_JSON.优选订阅生成.本地IP库.随机数量, config_JSON.优选订阅生成.本地IP库.指定端口)
+									await 生成随机IP(request, config_JSON.优选订阅生成.本地IP库.随机数量, config_JSON.优选订阅生成.本地IP库.指定端口, (协议类型 === 'ss' ? config_JSON.SS.TLS : true))
 								)[0];
 								const 优选API = [], 优选IP = [], 其他节点 = [];
 								for (const 元素 of 完整优选列表) {
@@ -362,7 +359,7 @@ export default {
 										}
 									}
 								}
-								const 请求优选API内容 = await 请求优选API(优选API, '443');
+								const 请求优选API内容 = await 请求优选API(优选API, (协议类型 === 'ss' && !config_JSON.SS.TLS) ? '80' : '443');
 								const 合并其他节点数组 = [...new Set(其他节点.concat(请求优选API内容[1]))];
 								其他节点LINK = 合并其他节点数组.length > 0 ? 合并其他节点数组.join('\n') + '\n' : '';
 								const 优选API的IP = 请求优选API内容[0];
@@ -390,7 +387,7 @@ export default {
 
 								if (match) {
 									节点地址 = match[1];  // IP地址或域名(可能带方括号)
-									节点端口 = match[2] ? match[2] : '443';  // 端口默认443，SS noTLS在生成链接时再映射
+									节点端口 = match[2] ? match[2] : (协议类型 === 'ss' && !config_JSON.SS.TLS) ? '80' : '443';  // 端口,TLS默认443 noTLS默认80
 									节点备注 = match[3] || 节点地址;  // 备注,默认为地址本身
 								} else {
 									// 不规范的格式，跳过处理返回null
@@ -417,11 +414,6 @@ export default {
 								if (isLoonOrSurge) 完整节点路径 = 完整节点路径.replace(/,/g, '%2C');
 
 								if (协议类型 === 'ss' && !作为优选订阅生成器) {
-									if (!config_JSON.SS.TLS) {
-										const TLS端口 = [443, 2053, 2083, 2087, 2096, 8443];
-										const NOTLS端口 = [80, 2052, 2082, 2086, 2095, 8080];
-										节点端口 = String(NOTLS端口[TLS端口.indexOf(Number(节点端口))] ?? 节点端口);
-									}
 									完整节点路径 = (完整节点路径.includes('?') ? 完整节点路径.replace('?', '?enc=' + config_JSON.SS.加密方式 + '&') : (完整节点路径 + '?enc=' + config_JSON.SS.加密方式)).replace(/([=,])/g, '\\$1');
 									if (!isSubConverterRequest) 完整节点路径 = 完整节点路径 + ';mux=0';
 									return `${协议类型}://${btoa(config_JSON.SS.加密方式 + ':00000000-0000-4000-8000-000000000000')}@${节点地址}:${节点端口}?plugin=v2${encodeURIComponent('ray-plugin;mode=websocket;host=example.com;path=' + (config_JSON.随机路径 ? 随机路径(完整节点路径) : 完整节点路径) + (config_JSON.SS.TLS ? ';tls' : '')) + ECHLINK参数 + TLS分片参数}#${encodeURIComponent(节点备注)}`;
@@ -4709,7 +4701,7 @@ function 识别运营商(request) {
 	return 命中运营商 || ASN运营商映射[String(cf?.asn || '')] || 'cf';
 }
 
-async function 生成随机IP(request, count = 16, 指定端口 = -1) {
+async function 生成随机IP(request, count = 16, 指定端口 = -1, TLS = true) {
 	const url = new URL(request.url);
 	const 查询参数运营商 = String(url.searchParams.get('asOrg') || '').toLowerCase();
 	const 运营商文件标识 = ['ct', 'cu', 'cmcc', 'cf'].includes(查询参数运营商) ? 查询参数运营商 : 识别运营商(request);
@@ -4721,7 +4713,7 @@ async function 生成随机IP(request, count = 16, 指定端口 = -1) {
 	};
 	const cidr_url = 运营商文件标识 === 'cf' ? 'https://raw.githubusercontent.com/cmliu/cmliu/main/CF-CIDR.txt' : `https://raw.githubusercontent.com/cmliu/cmliu/main/CF-CIDR/${运营商文件标识}.txt`;
 	const cfname = 运营商名称映射[运营商文件标识] || 'CF官方优选';
-	const cfport = [443, 2053, 2083, 2087, 2096, 8443];
+	const cfport = TLS ? [443, 2053, 2083, 2087, 2096, 8443] : [80, 8080, 8880, 2052, 2082, 2086, 2095];
 	let cidrList = [];
 	try { const res = await fetch(cidr_url); cidrList = res.ok ? await 整理成数组(await res.text()) : ['104.16.0.0/13'] } catch { cidrList = ['104.16.0.0/13'] }
 
@@ -4732,11 +4724,14 @@ async function 生成随机IP(request, count = 16, 指定端口 = -1) {
 		const mask = (0xFFFFFFFF << hostBits) >>> 0, randomIP = (((ipInt & mask) >>> 0) + randomOffset) >>> 0;
 		return [(randomIP >>> 24) & 0xFF, (randomIP >>> 16) & 0xFF, (randomIP >>> 8) & 0xFF, randomIP & 0xFF].join('.');
 	};
+	const TLS端口 = [443, 2053, 2083, 2087, 2096, 8443];
+	const NOTLS端口 = [80, 2052, 2082, 2086, 2095, 8080];
+
 	const randomIPs = Array.from({ length: count }, (_, index) => {
 		const ip = generateRandomIPFromCIDR(cidrList[Math.floor(Math.random() * cidrList.length)]);
 		const 目标端口 = 指定端口 === -1
 			? cfport[Math.floor(Math.random() * cfport.length)]
-			: 指定端口;
+			: (TLS ? 指定端口 : (NOTLS端口[TLS端口.indexOf(Number(指定端口))] ?? 指定端口));
 		return `${ip}:${目标端口}#${cfname}${index + 1}`;
 	});
 	return [randomIPs, randomIPs.join('\n')];
