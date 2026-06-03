@@ -5,7 +5,7 @@ on:
   schedule:
     # 北京时间 03:00 -> UTC 19:00 (前一天)
     # 北京时间 15:00 -> UTC 07:00
-    - cron: '0 7,19 * * *'
+    - cron: '0 6,19 * * *'
 
 jobs:
   obfuscate:
