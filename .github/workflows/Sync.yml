@@ -1,0 +1,146 @@
+name: Sync EdgeTunnel Worker
+
+on:
+  schedule:
+    # 每天北京时间凌晨 2:00 运行（对应 UTC 时间前一天 18:00）
+    - cron: '0 18 * * *'
+  workflow_dispatch: # 允许手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1 # 只需要最新版本即可
+
+    - name: Check and Download Worker
+      run: |
+        REPO="cmliu/edgetunnel"
+        FILE_PATH="_worker.js"
+        TARGET_DIR="workers/cm-plain/2.1"
+        TARGET_FILE="$TARGET_DIR/_worker.js"
+        
+        # 1. 创建目标目录（-p 参数自带判断：如果目录已存在，它什么都不做；如果不存在，则创建它）
+        mkdir -p "$TARGET_DIR"
+
+        echo "===== 1. 检查远程文件更新时间 ====="
+        # 获取远程文件的最后提交时间 (ISO 8601 格式)
+        COMMIT_TIME_STR=$(curl -s "https://api.github.com/repos/$REPO/commits?path=$FILE_PATH&page=1&per_page=1" | jq -r '.[0].commit.committer.date')
+        
+        if [ "$COMMIT_TIME_STR" = "null" ] || [ -z "$COMMIT_TIME_STR" ]; then
+          echo "错误：无法获取远程提交时间，可能是触发了 GitHub API 速率限制。"
+          exit 1
+        fi
+
+        # 转换为时间戳
+        COMMIT_TIMESTAMP=$(date -d "$COMMIT_TIME_STR" +%s)
+        CURRENT_TIMESTAMP=$(date +%s)
+        TIME_DIFF=$((CURRENT_TIMESTAMP - COMMIT_TIMESTAMP))
+        ONE_DAY_SECONDS=86400
+
+        echo "远程文件最后更新时间: $COMMIT_TIME_STR"
+        echo "当前时间: $(date -u -d "@$CURRENT_TIMESTAMP" +"%Y-%m-%dT%H:%M:%SZ")"
+        echo "时间差: $((TIME_DIFF / 3600)) 小时"
+
+        if [ $TIME_DIFF -le $ONE_DAY_SECONDS ]; then
+          echo "提示：远程文件更新时间未超过 24 小时，跳过后续下载与同步。"
+          exit 0
+        fi
+
+        echo "===== 2. 开始下载与 Hash 校验流程 ====="
+        RAW_URL="https://raw.githubusercontent.com/$REPO/main/$FILE_PATH"
+
+        # 获取权威远程源仓库文件的 SHA256 基准值
+        REMOTE_SHA256=$(curl -s -H "Accept: application/vnd.github.v3.raw" "$RAW_URL" | sha256sum | awk '{print $1}')
+        echo "权威远程文件 SHA256: $REMOTE_SHA256"
+
+        LOOP_COUNT=0
+        SUCCESS=false
+
+        # 外层循环：Hash 不一致最多重试 3 次
+        while [ $LOOP_COUNT -lt 3 ]; do
+          LOOP_COUNT=$((LOOP_COUNT + 1))
+          echo "--> [第 $LOOP_COUNT 次尝试] 正在下载文件..."
+
+          # 内层循环：网络下载失败最多重试 3 次
+          DOWNLOAD_RETRY=0
+          DOWNLOAD_SUCCESS=false
+          while [ $DOWNLOAD_RETRY -lt 3 ]; do
+            DOWNLOAD_RETRY=$((DOWNLOAD_RETRY + 1))
+            
+            # 使用 curl 下载并直接覆盖本地目标路径
+            if curl -sS --connect-timeout 10 --max-time 30 "$RAW_URL" -o "$TARGET_FILE"; then
+              DOWNLOAD_SUCCESS=true
+              break
+            else
+              echo "    警告: 下载失败，3秒后进行第 $DOWNLOAD_RETRY 次下载重试..."
+              sleep 3
+            fi
+          done
+
+          if [ "$DOWNLOAD_SUCCESS" = "false" ]; then
+            echo "错误: 下载重试 3 次后依然失败，退出工作流。"
+            exit 1
+          fi
+
+          # 计算刚下载下来的本地文件 Hash
+          LOCAL_SHA256=$(sha256sum "$TARGET_FILE" | awk '{print $1}')
+          echo "    下载成功。本地 Hash: $LOCAL_SHA256"
+
+          # 【校验一】对比刚下载的文件和远程源仓库文件（防损坏）
+          if [ "$LOCAL_SHA256" = "$REMOTE_SHA256" ]; then
+            echo "    [验证通过] 本地 Hash 与远程一致，文件完整无损坏。"
+            SUCCESS=true
+            break
+          else
+            echo "    [验证失败] Hash 不一致！文件可能损坏。"
+            if [ $LOOP_COUNT -lt 3 ]; then
+              echo "    准备重新下载并重新比对..."
+              sleep 5
+            fi
+          fi
+        done
+
+        if [ "$SUCCESS" = "false" ]; then
+          echo "错误: 重试 3 次后，下载的文件 Hash 始终与远程不一致，放弃提交。"
+          exit 1
+        fi
+
+        echo "===== 3. 对比本地库中旧文件的 Hash ====="
+        # 【核心修复】：直接让 Git 从上一次 Commit (HEAD) 中把旧文件的内容提取到内存中计算 Hash
+        # 如果你仓库里是第一次初始化这个文件，git show 会报错，通过 2>/dev/null 屏蔽报错，OLD_SHA256 就会为空值
+        OLD_SHA256=$(git show HEAD:"$TARGET_FILE" 2>/dev/null | sha256sum | awk '{print $1}') || true
+        
+        if [ -n "$OLD_SHA256" ]; then
+          echo "本库中原本旧文件的 SHA256: $OLD_SHA256"
+          
+          # 【校验二】对比新下载的文件 Hash 和 库里原本旧文件的 Hash（防重复提交）
+          if [ "$LOCAL_SHA256" = "$OLD_SHA256" ]; then
+            echo "提示：下载的文件与本库中的旧文件 Hash 完全一致，内容无变化，拒绝提交。"
+            exit 0
+          else
+            echo "[检测到更新] 下载的文件与本库旧文件 Hash 不一致，准备提交更改。"
+          fi
+        else
+          echo "未检测到本库中有旧文件记录（可能是首次初始化或新路径），准备直接提交。"
+        fi
+
+        # 允许通过所有验证，传递变量给下一步执行 Commit
+        echo "SHOULD_COMMIT=true" >> $GITHUB_ENV
+
+    - name: Commit and Push Changes
+      if: env.SHOULD_COMMIT == 'true'
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        
+        git add workers/cm-plain/2.1/_worker.js
+        git commit -m "chore: auto-update _worker.js from cmliu/edgetunnel"
+        git push
+        echo "同步成功，新文件已推送到仓库。"
