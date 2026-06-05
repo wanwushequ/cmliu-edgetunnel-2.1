@@ -2,9 +2,9 @@ name: Sync EdgeTunnel Worker
 
 on:
   schedule:
-    # 每天北京时间凌晨 2:00 运行（对应 UTC 时间前一天 18:00）
+    # 北京时间凌晨 2:00
     - cron: '0 18 * * *'
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -55,7 +55,7 @@ jobs:
         COMMIT_TIMESTAMP=$(date -d "$COMMIT_TIME_STR" +%s)
         CURRENT_TIMESTAMP=$(date +%s)
         TIME_DIFF=$((CURRENT_TIMESTAMP - COMMIT_TIMESTAMP))
-        SEVENTY_TWO_HOURS_SECONDS=259200  # 72小时 = 72 * 3600 秒
+        SEVENTY_TWO_HOURS_SECONDS=172800  # 48小时
 
         echo "远程文件最后更新时间: $COMMIT_TIME_STR"
         echo "当前时间: $(date -u -d "@$CURRENT_TIMESTAMP" +"%Y-%m-%dT%H:%M:%SZ")"
