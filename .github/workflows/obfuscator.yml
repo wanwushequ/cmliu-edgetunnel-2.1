@@ -24,14 +24,13 @@ jobs:
         run: |
           javascript-obfuscator 明文源码.js --output _worker.js \
           --compact true \
-          --identifier-names-generator mangled \
           --rename-globals false \
           --control-flow-flattening false \
           --dead-code-injection false \
           --string-array false \
           --transform-object-keys false \
           --unicode-escape-sequence false \
-          --reserved-names "^[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]+$"          
+          --reserved-names "^.*$"
 
       - name: 提交并推送
         run: |
