@@ -24,6 +24,7 @@ jobs:
         run: |
           javascript-obfuscator 明文源码.js --output _worker.js \
           --compact true \
+          --rename-globals false
 
       - name: 提交并推送
         run: |
