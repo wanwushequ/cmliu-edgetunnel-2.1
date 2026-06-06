@@ -31,6 +31,8 @@ jobs:
           --transform-object-keys false \
           --unicode-escape-sequence false \
           --reserved-names "^.*$"
+          --dead-code-injection true \
+          --dead-code-injection-threshold 0.01
 
       - name: 提交并推送
         run: |
