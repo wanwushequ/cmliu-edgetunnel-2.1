@@ -30,7 +30,7 @@ jobs:
           --string-array false \
           --transform-object-keys false \
           --unicode-escape-sequence false \
-          --reserved-names "^.*$"
+          --reserved-names "^[\p{L}\p{N}_$]+$"
 
           BJ_TIME=$(TZ="Asia/Shanghai" date "+%Y-%m-%d %H:%M:%S")
           sed -i "1i // ${BJ_TIME}" _worker.js
