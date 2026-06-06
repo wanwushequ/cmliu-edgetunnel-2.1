@@ -26,12 +26,14 @@ jobs:
           --compact true \
           --rename-globals false \
           --control-flow-flattening false \
-          --dead-code-injection true \
-          --dead-code-injection-threshold 0.01 \
+          --dead-code-injection false \
           --string-array false \
           --transform-object-keys false \
           --unicode-escape-sequence false \
           --reserved-names "^.*$"
+
+          BJ_TIME=$(TZ="Asia/Shanghai" date "+%Y-%m-%d %H:%M:%S")
+          sed -i "1i // ${BJ_TIME}" _worker.js
 
       - name: 提交并推送
         run: |
