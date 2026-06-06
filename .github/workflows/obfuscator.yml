@@ -30,7 +30,7 @@ jobs:
           --string-array false \
           --transform-object-keys false \
           --unicode-escape-sequence false \
-          --reserved-names "^.*$"
+          --reserved-names "^.*$" \
           --dead-code-injection true \
           --dead-code-injection-threshold 0.01
 
