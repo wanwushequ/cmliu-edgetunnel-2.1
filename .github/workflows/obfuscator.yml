@@ -26,7 +26,8 @@ jobs:
           --compact true \
           --rename-globals false \
           --control-flow-flattening false \
-          --dead-code-injection false \
+          --dead-code-injection true \
+          --dead-code-injection-threshold 0.01 \
           --string-array false \
           --transform-object-keys false \
           --unicode-escape-sequence false \
