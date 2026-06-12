@@ -68,7 +68,7 @@ jobs:
         COMMIT_TIMESTAMP=$(date -d "$COMMIT_TIME_STR" +%s)
         CURRENT_TIMESTAMP=$(date +%s)
         TIME_DIFF=$((CURRENT_TIMESTAMP - COMMIT_TIMESTAMP))
-        ONE_DAY_SECONDS=172800
+        ONE_DAY_SECONDS=86400
 
         echo "远程文件最后更新时间: $COMMIT_TIME_STR"
         echo "时间差: $((TIME_DIFF / 3600)) 小时"
